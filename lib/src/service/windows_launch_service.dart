@@ -138,6 +138,7 @@ class WindowsLaunchService {
       await socket.flush();
 
       final String response = await socket
+          .cast<List<int>>()
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .first
@@ -153,6 +154,7 @@ class WindowsLaunchService {
   Future<void> _handleClient(Socket socket) async {
     try {
       final String line = await socket
+          .cast<List<int>>()
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .first
