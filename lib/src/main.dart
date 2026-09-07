@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:desktop_webview_window/desktop_webview_window.dart';
@@ -33,6 +34,7 @@ import 'package:jhentai/src/service/super_resolution_service.dart';
 import 'package:jhentai/src/service/tag_search_order_service.dart';
 import 'package:jhentai/src/service/tag_translation_service.dart';
 import 'package:jhentai/src/service/volume_service.dart';
+import 'package:jhentai/src/service/windows_launch_service.dart';
 import 'package:jhentai/src/service/windows_service.dart';
 import 'package:jhentai/src/setting/advanced_setting.dart';
 import 'package:jhentai/src/setting/archive_bot_setting.dart';
@@ -107,6 +109,10 @@ void main(List<String> args) async {
     return;
   }
 
+  if (Platform.isWindows && await windowsLaunchService.prepare(args)) {
+    return;
+  }
+
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -161,6 +167,7 @@ class MyApp extends StatelessWidget {
         for (JHLifeCircleBean bean in lifeCircleBeans) {
           bean.afterBeanReady();
         }
+        unawaited(windowsLaunchService.onAppReady());
       },
     );
 
