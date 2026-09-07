@@ -61,7 +61,7 @@ class WindowsLaunchService {
       _server!.listen(
         _handleClient,
         onError: (Object error, StackTrace stackTrace) {
-          log.warning('Windows launch bridge listener error', error, stackTrace);
+          _reportError('Windows launch bridge listener error', error, stackTrace);
         },
       );
 
@@ -77,7 +77,7 @@ class WindowsLaunchService {
         return true;
       }
 
-      log.warning('Unable to own Windows launch bridge port', e, st);
+      _reportError('Unable to own Windows launch bridge port', e, st);
       if (target != null) {
         _pendingTargets.add(target);
       }
@@ -180,7 +180,7 @@ class WindowsLaunchService {
         _pendingTargets.add(target);
       }
     } catch (e, st) {
-      log.warning('Invalid Windows launch bridge request', e, st);
+      _reportError('Invalid Windows launch bridge request', e, st);
       try {
         socket.writeln('ERR');
         await socket.flush();
@@ -221,7 +221,7 @@ class WindowsLaunchService {
         subConfigKey: gallery.progressKey,
       );
     } catch (e, st) {
-      log.warning('Unable to read external gallery progress', e, st);
+      _reportError('Unable to read external gallery progress', e, st);
     }
 
     int initialIndex = int.tryParse(savedIndexRaw ?? '') ?? gallery.targetImageIndex;
@@ -275,7 +275,7 @@ class WindowsLaunchService {
     try {
       type = FileSystemEntity.typeSync(target, followLinks: true);
     } catch (e, st) {
-      log.warning('Unable to inspect external gallery path: $target', e, st);
+      _reportError('Unable to inspect external gallery path: $target', e, st);
       return null;
     }
 
@@ -302,7 +302,7 @@ class WindowsLaunchService {
           .toList()
         ..sort(FileUtil.naturalCompareFile);
     } catch (e, st) {
-      log.warning('Unable to enumerate external gallery: ${galleryDirectory.path}', e, st);
+      _reportError('Unable to enumerate external gallery: ${galleryDirectory.path}', e, st);
       return null;
     }
 
@@ -349,7 +349,21 @@ class WindowsLaunchService {
       await windowManager.focus();
     } catch (e, st) {
       // Navigation is still useful even if Windows refuses a focus request.
-      log.warning('Unable to focus JHenTai window for external launch', e, st);
+      _reportError('Unable to focus JHenTai window for external launch', e, st);
+    }
+  }
+
+  void _reportError(String message, Object error, [StackTrace? stackTrace]) {
+    if (_appReady) {
+      log.error(message, error, stackTrace);
+      return;
+    }
+
+    // prepare() runs before JHenTai's PathService/LogService lifecycle. Using
+    // the normal logger here would itself touch uninitialized paths.
+    stderr.writeln('$message: $error');
+    if (stackTrace != null) {
+      stderr.writeln(stackTrace);
     }
   }
 }
