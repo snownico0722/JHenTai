@@ -1,0 +1,59 @@
+name: Build Windows Bakabase Edition
+
+on:
+  push:
+    branches:
+      - 'windows/bakabase-direct-open'
+  workflow_dispatch:
+
+concurrency:
+  group: windows-bakabase-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    env:
+      FLUTTER_VERSION: 3.44.8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: master
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Flutter pub get
+        run: |
+          git config --global core.longpaths true
+          flutter pub get
+
+      - name: Analyze Windows launch changes
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/src/main.dart lib/src/service/windows_launch_service.dart
+
+      - name: Build Windows
+        shell: pwsh
+        run: |
+          flutter build windows -t lib/src/main.dart --release
+          $VersionLine = (Get-Content pubspec.yaml | Select-String '^version:').Line
+          $Version = ($VersionLine -split ':', 2)[1].Trim()
+          $DestDir = "build\windows\JHenTai_${Version}_Bakabase_Windows"
+          $SrcDir = "build\windows\x64\runner\Release"
+          New-Item -Path $DestDir -ItemType Directory -Force | Out-Null
+          Copy-Item "$SrcDir\*" -Recurse -Destination $DestDir
+          Copy-Item -Filter *.dll -Path "windows\*" -Destination $DestDir -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path $DestDir -DestinationPath "build\windows\JHenTai_${Version}_Bakabase_Windows.zip" -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: JHenTai-Windows-Bakabase
+          path: build/windows/*_Bakabase_Windows.zip
+          if-no-files-found: error
