@@ -1,0 +1,34 @@
+name: Build 823 arm64 release APK
+
+on:
+  push:
+    branches:
+      - build/823-arm64-release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+          cache: gradle
+      - run: flutter pub get
+      - name: Use test signing for release build
+        run: sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/' android/app/build.gradle
+      - name: Build arm64-v8a release APK
+        run: flutter build apk -t lib/src/main.dart --release --split-per-abi
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk JHenTai-8.0.16-823-arm64-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JHenTai-823-arm64-release
+          path: JHenTai-8.0.16-823-arm64-release.apk
+          if-no-files-found: error
