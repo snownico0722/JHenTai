@@ -47,7 +47,13 @@ class DownloadPathResolver {
   }
 
   static String computeImageDownloadAbsolutePathFromRelativePath(String imageRelativePath) {
-    String p = path.join(pathService.getVisibleDir().path, imageRelativePath);
+    // package:path returns an absolute path when a relative path cannot be
+    // expressed across Windows drive roots (for example app data on C: and an
+    // externally managed gallery on D:). External-local galleries therefore
+    // may legitimately store an absolute image path here.
+    String p = path.isAbsolute(imageRelativePath)
+        ? path.normalize(imageRelativePath)
+        : path.join(pathService.getVisibleDir().path, imageRelativePath);
 
     /// I don't know why some images can't be loaded on Windows... If you knows, please tell me
     if (!GetPlatform.isWindows) {
